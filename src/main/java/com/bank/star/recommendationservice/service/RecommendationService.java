@@ -19,7 +19,7 @@ public class RecommendationService {
 
     public List<RecommendationDto> getRecommendations(UUID userId) {
         return rules.stream()
-                .map(rule -> rule.check(userId))
+                .map(rule -> rule.evaluate(userId))
                 .filter(Optional::isPresent)
                 .map(Optional::get)
                 .toList();

@@ -17,10 +17,12 @@ public class Invest500RuleSet implements RecommendationRuleSet {
     }
 
     @Override
-    public Optional<RecommendationDto> check(UUID userId) {
-        boolean valid = true;
+    public Optional<RecommendationDto> evaluate(UUID userId) {
+        boolean hasDebit = repository.userHasProductType(userId, "DEBIT");
+        boolean noInvest = !repository.userHasProductType(userId, "INVEST");
+        boolean savingDepositsOver1k = repository.sumDepositsByType(userId, "SAVING") > 1000;
 
-        if (valid) {
+        if (hasDebit && noInvest && savingDepositsOver1k) {
             return Optional.of(new RecommendationDto(
                     UUID.fromString("147f6a0f-3b91-413b-ab99-87f081d60d5a"),
                     "Invest 500",
