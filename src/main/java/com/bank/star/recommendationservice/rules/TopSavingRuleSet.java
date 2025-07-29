@@ -2,6 +2,7 @@ package com.bank.star.recommendationservice.rules;
 
 import com.bank.star.recommendationservice.dto.RecommendationDto;
 import com.bank.star.recommendationservice.repository.RecommendationsRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
@@ -11,26 +12,38 @@ import java.util.UUID;
 public class TopSavingRuleSet implements RecommendationRuleSet {
 
     private final RecommendationsRepository repository;
+    private final String productId;
+    private final String productName;
+    private final String productText;
 
-    public TopSavingRuleSet(RecommendationsRepository repository) {
+    public TopSavingRuleSet(
+            RecommendationsRepository repository,
+            @Value("${products.topSaving.id}") String productId,
+            @Value("${products.topSaving.name}") String productName,
+            @Value("${products.topSaving.text}") String productText
+    ) {
         this.repository = repository;
+        this.productId = productId;
+        this.productName = productName;
+        this.productText = productText;
     }
 
     @Override
     public Optional<RecommendationDto> evaluate(UUID userId) {
         boolean hasDebit = repository.userHasProductType(userId, "DEBIT");
 
-        boolean savingOrDebitSum = repository.sumDepositsByType(userId, "DEBIT") >= 50_000
-                || repository.sumDepositsByType(userId, "SAVING") >= 50_000;
+        long debitDeposits = repository.sumDepositsByType(userId, "DEBIT");
+        long savingDeposits = repository.sumDepositsByType(userId, "SAVING");
+        long debitWithdrawals = repository.sumWithdrawalsByType(userId, "DEBIT");
 
-        boolean debitDepositsMoreThanSpend = repository.sumDepositsByType(userId, "DEBIT")
-                > repository.sumWithdrawalsByType(userId, "DEBIT");
+        boolean savingOrDebitSum = debitDeposits >= 50_000 || savingDeposits >= 50_000;
+        boolean debitDepositsMoreThanSpend = debitDeposits > debitWithdrawals;
 
         if (hasDebit && savingOrDebitSum && debitDepositsMoreThanSpend) {
             return Optional.of(new RecommendationDto(
-                    UUID.fromString("59efc529-2fff-41af-baff-90ccd7402925"),
-                    "Top Saving",
-                    "Описание продукта Top Saving"
+                    UUID.fromString(productId),
+                    productName,
+                    productText
             ));
         }
 

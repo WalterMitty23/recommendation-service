@@ -2,6 +2,7 @@ package com.bank.star.recommendationservice.rules;
 
 import com.bank.star.recommendationservice.dto.RecommendationDto;
 import com.bank.star.recommendationservice.repository.RecommendationsRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
@@ -11,25 +12,39 @@ import java.util.UUID;
 public class Invest500RuleSet implements RecommendationRuleSet {
 
     private final RecommendationsRepository repository;
+    private final String productId;
+    private final String productName;
+    private final String productText;
 
-    public Invest500RuleSet(RecommendationsRepository repository) {
+    public Invest500RuleSet(
+            RecommendationsRepository repository,
+            @Value("${products.invest500.id}") String productId,
+            @Value("${products.invest500.name}") String productName,
+            @Value("${products.invest500.text}") String productText
+    ) {
         this.repository = repository;
+        this.productId = productId;
+        this.productName = productName;
+        this.productText = productText;
     }
 
     @Override
     public Optional<RecommendationDto> evaluate(UUID userId) {
-        boolean hasDebit = repository.userHasProductType(userId, "DEBIT");
-        boolean noInvest = !repository.userHasProductType(userId, "INVEST");
-        boolean savingDepositsOver1k = repository.sumDepositsByType(userId, "SAVING") > 1000;
-
-        if (hasDebit && noInvest && savingDepositsOver1k) {
-            return Optional.of(new RecommendationDto(
-                    UUID.fromString("147f6a0f-3b91-413b-ab99-87f081d60d5a"),
-                    "Invest 500",
-                    "Описание продукта Invest 500"
-            ));
+        if (!repository.userHasProductType(userId, "DEBIT")) {
+            return Optional.empty();
+        }
+        if (repository.userHasProductType(userId, "INVEST")) {
+            return Optional.empty();
+        }
+        if (repository.sumDepositsByType(userId, "SAVING") <= 1000) {
+            return Optional.empty();
         }
 
-        return Optional.empty();
+        return Optional.of(new RecommendationDto(
+                UUID.fromString(productId),
+                productName,
+                productText
+        ));
     }
 }
+
