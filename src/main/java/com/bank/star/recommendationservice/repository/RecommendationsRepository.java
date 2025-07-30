@@ -1,6 +1,7 @@
 package com.bank.star.recommendationservice.repository;
 
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -23,6 +24,8 @@ public class RecommendationsRepository {
         );
     }
 
+
+    @Cacheable(value = "userHasProductType", key = "#userId + '-' + #productType")
     public boolean userHasProductType(UUID userId, String productType) {
         String sql = """
             SELECT COUNT(*) 
@@ -34,6 +37,8 @@ public class RecommendationsRepository {
         return count != null && count > 0;
     }
 
+
+    @Cacheable(value = "sumDepositsByType", key = "#userId + '-' + #productType")
     public int sumDepositsByType(UUID userId, String productType) {
         String sql = """
             SELECT COALESCE(SUM(t.amount),0) 
@@ -44,6 +49,7 @@ public class RecommendationsRepository {
         return jdbcTemplate.queryForObject(sql, Integer.class, userId, productType);
     }
 
+    @Cacheable(value = "sumWithdrawalsByType", key = "#userId + '-' + #productType")
     public int sumWithdrawalsByType(UUID userId, String productType) {
         String sql = """
             SELECT COALESCE(SUM(t.amount),0) 
@@ -52,5 +58,27 @@ public class RecommendationsRepository {
             WHERE t.user_id = ? AND p.type = ? AND t.type = 'WITHDRAW'
         """;
         return jdbcTemplate.queryForObject(sql, Integer.class, userId, productType);
+    }
+
+    @Cacheable(value = "countTransactionsByType", key = "#userId + '-' + #productType")
+    public int countTransactionsByType(UUID userId, String productType) {
+        String sql = """
+            SELECT COUNT(*)
+            FROM transactions t
+            JOIN products p ON t.product_id = p.id
+            WHERE t.user_id = ? AND p.type = ?
+        """;
+        return jdbcTemplate.queryForObject(sql, Integer.class, userId, productType);
+    }
+
+    @Cacheable(value = "sumTransactionByType", key = "#userId + '-' + #productType + '-' + #txType")
+    public int sumTransactionByType(UUID userId, String productType, String txType) {
+        String sql = """
+            SELECT COALESCE(SUM(t.amount),0)
+            FROM transactions t
+            JOIN products p ON t.product_id = p.id
+            WHERE t.user_id = ? AND p.type = ? AND t.type = ?
+        """;
+        return jdbcTemplate.queryForObject(sql, Integer.class, userId, productType, txType);
     }
 }
