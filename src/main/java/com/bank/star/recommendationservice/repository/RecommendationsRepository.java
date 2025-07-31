@@ -5,6 +5,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -80,5 +81,22 @@ public class RecommendationsRepository {
             WHERE t.user_id = ? AND p.type = ? AND t.type = ?
         """;
         return jdbcTemplate.queryForObject(sql, Integer.class, userId, productType, txType);
+    }
+    public Optional<UUID> findUserIdByFullName(String fullName) {
+        String sql = """
+        SELECT id FROM users 
+        WHERE CONCAT(first_name, ' ', last_name) = ?
+    """;
+
+        return jdbcTemplate.query(sql, ps -> ps.setString(1, fullName), rs -> {
+            if (!rs.next()) {
+                return Optional.empty();
+            }
+            UUID userId = UUID.fromString(rs.getString("id"));
+            if (rs.next()) {
+                return Optional.empty();
+            }
+            return Optional.of(userId);
+        });
     }
 }

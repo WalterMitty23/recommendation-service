@@ -17,4 +17,13 @@
         </createTable>
     </changeSet>
 
+    <changeSet id="2" author="alex">
+        <createTable tableName="rule_stats">
+            <column name="rule_id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="count" type="INT" defaultValueNumeric="0"/>
+        </createTable>
+    </changeSet>
+
 </databaseChangeLog>

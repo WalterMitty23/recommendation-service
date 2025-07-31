@@ -18,9 +18,16 @@ public class DynamicRuleEvaluator {
 
     public boolean evaluate(UUID userId, List<Map<String, Object>> rule) {
         for (Map<String, Object> condition : rule) {
+            // достаём поля с безопасной проверкой
             String query = (String) condition.get("query");
             List<String> arguments = (List<String>) condition.get("arguments");
-            boolean negate = (Boolean) condition.get("negate");
+            boolean negate = Boolean.TRUE.equals(condition.get("negate"));
+
+            // проверяем null перед использованием
+            if (query == null || arguments == null || arguments.isEmpty()) {
+                System.out.println("⚠️ Некорректное правило: " + condition);
+                return false;
+            }
 
             boolean result = switch (query) {
                 case "USER_OF" -> checkUserOf(userId, arguments.get(0), negate);
@@ -30,7 +37,10 @@ public class DynamicRuleEvaluator {
                                 arguments.get(2), Integer.parseInt(arguments.get(3)), negate);
                 case "TRANSACTION_SUM_COMPARE_DEPOSIT_WITHDRAW" ->
                         checkTransactionSumDepositWithdraw(userId, arguments.get(0), arguments.get(1), negate);
-                default -> false;
+                default -> {
+                    System.out.println("⚠️ Неизвестный query: " + query);
+                    yield false;
+                }
             };
 
             if (!result) {
@@ -39,6 +49,7 @@ public class DynamicRuleEvaluator {
         }
         return true;
     }
+
 
     private boolean checkUserOf(UUID userId, String productType, boolean negate) {
         boolean result = recommendationsRepository.userHasProductType(userId, productType);

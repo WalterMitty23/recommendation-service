@@ -1,10 +1,14 @@
 server:
   port: 8080
 
+
+
 spring:
-  # --- 1. Первая база: readonly H2 (transaction.mv.db)
+  config:
+    import: optional:application-secrets.yml
+
   datasource:
-    url: jdbc:h2:file:./transaction;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    url: jdbc:h2:file:./transaction;AUTO_SERVER=TRUE;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
     driver-class-name: org.h2.Driver
     username: sa
     password:
@@ -24,14 +28,12 @@ spring:
       force: true
       enabled: true
 
-  # --- 2. Вторая база: динамические правила (можно H2 или PostgreSQL)
   dynamic-datasource:
-    url: jdbc:postgresql://localhost:5432/dynamic_rules
+    url: ${spring.dynamic-datasource.url}
     driver-class-name: org.postgresql.Driver
-    username: postgres
-    password: 0331SQL
+    username: ${spring.dynamic-datasource.username}
+    password: ${spring.dynamic-datasource.password}
 
-  # --- 3. Liquibase работает ТОЛЬКО со второй базой
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.xml
     url: ${spring.dynamic-datasource.url}
@@ -84,8 +86,14 @@ products:
       - Безопасность и надежность. Ваши средства находятся под защитой банка, а доступ к ним возможен только через мобильное приложение или интернет-банкинг.
 
       Начните использовать «Копилку» уже сегодня и станьте ближе к своим финансовым целям!
+
 springdoc:
   api-docs:
     path: /v3/api-docs
   swagger-ui:
     path: /swagger-ui.html
+
+telegram:
+  bot:
+    username: ${telegram.bot.username}
+    token: ${telegram.bot.token}

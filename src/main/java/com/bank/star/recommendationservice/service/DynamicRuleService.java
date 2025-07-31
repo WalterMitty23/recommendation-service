@@ -4,6 +4,7 @@ import com.bank.star.recommendationservice.dto.DynamicRuleRequest;
 import com.bank.star.recommendationservice.dto.DynamicRuleResponse;
 import com.bank.star.recommendationservice.entity.DynamicRuleEntity;
 import com.bank.star.recommendationservice.repository.DynamicRuleRepository;
+import com.bank.star.recommendationservice.repository.DynamicRuleStatsRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
@@ -15,10 +16,15 @@ import java.util.UUID;
 public class DynamicRuleService {
 
     private final DynamicRuleRepository dynamicRuleRepository;
+    private final DynamicRuleStatsRepository statsRepository;
     private final ObjectMapper objectMapper;
 
-    public DynamicRuleService(DynamicRuleRepository dynamicRuleRepository, ObjectMapper objectMapper) {
+    public DynamicRuleService(
+            DynamicRuleRepository dynamicRuleRepository,
+            DynamicRuleStatsRepository statsRepository,
+            ObjectMapper objectMapper) {
         this.dynamicRuleRepository = dynamicRuleRepository;
+        this.statsRepository = statsRepository;
         this.objectMapper = objectMapper;
     }
 
@@ -46,6 +52,11 @@ public class DynamicRuleService {
     }
 
     public void deleteRuleByProductId(UUID productId) {
+        dynamicRuleRepository.findAll()
+                .stream()
+                .filter(rule -> rule.getProductId().equals(productId))
+                .forEach(rule -> statsRepository.deleteByRuleId(rule.getId()));
+
         dynamicRuleRepository.deleteByProductId(productId);
     }
 
