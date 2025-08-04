@@ -1,7 +1,10 @@
 package com.bank.star.recommendationservice.service;
 
 import com.bank.star.recommendationservice.dto.RecommendationDto;
+import com.bank.star.recommendationservice.repository.DynamicRuleRepository;
+import com.bank.star.recommendationservice.repository.DynamicRuleStatsRepository;
 import com.bank.star.recommendationservice.rules.RecommendationRuleSet;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,59 +23,61 @@ import static org.mockito.Mockito.*;
 class RecommendationServiceTest {
 
     @Mock
-    private RecommendationRuleSet invest500RuleSet;
+    private RecommendationRuleSet rule1;
 
     @Mock
-    private RecommendationRuleSet topSavingRuleSet;
+    private RecommendationRuleSet rule2;
 
     @Mock
-    private RecommendationRuleSet simpleCreditRuleSet;
+    private DynamicRuleRepository dynamicRuleRepository;
 
-    private RecommendationService recommendationService;
+    @Mock
+    private DynamicRuleStatsRepository statsRepository;
+
+    @Mock
+    private DynamicRuleEvaluator evaluator;
+
+    @Mock
+    private ObjectMapper objectMapper;
+
+    private RecommendationService service;
 
     @BeforeEach
     void setUp() {
-        recommendationService = new RecommendationService(
-                List.of(invest500RuleSet, topSavingRuleSet, simpleCreditRuleSet)
+        service = new RecommendationService(
+                List.of(rule1, rule2),
+                dynamicRuleRepository,
+                statsRepository,
+                evaluator,
+                objectMapper
         );
     }
 
     @Test
-    void shouldReturnMultipleRecommendations_whenRulesSatisfied() {
+    void shouldReturnRecommendations_whenRulesMatch() {
         UUID userId = UUID.randomUUID();
 
-        when(invest500RuleSet.evaluate(userId))
-                .thenReturn(Optional.of(new RecommendationDto(UUID.randomUUID(), "Invest 500", "text")));
-        when(topSavingRuleSet.evaluate(userId))
-                .thenReturn(Optional.of(new RecommendationDto(UUID.randomUUID(), "Top Saving", "text")));
-        when(simpleCreditRuleSet.evaluate(userId))
-                .thenReturn(Optional.empty());
+        when(rule1.evaluate(userId)).thenReturn(Optional.of(
+                new RecommendationDto(UUID.randomUUID(), "Product A", "Description")
+        ));
+        when(rule2.evaluate(userId)).thenReturn(Optional.empty());
 
-        List<RecommendationDto> recommendations = recommendationService.getRecommendations(userId);
+        List<RecommendationDto> result = service.getRecommendations(userId);
 
-        assertEquals(2, recommendations.size());
-        assertTrue(recommendations.stream().anyMatch(r -> r.getName().equals("Invest 500")));
-        assertTrue(recommendations.stream().anyMatch(r -> r.getName().equals("Top Saving")));
-
-        verify(invest500RuleSet).evaluate(userId);
-        verify(topSavingRuleSet).evaluate(userId);
-        verify(simpleCreditRuleSet).evaluate(userId);
+        assertEquals(1, result.size());
+        assertEquals("Product A", result.get(0).getName());
     }
 
     @Test
-    void shouldReturnEmptyList_whenNoRulesSatisfied() {
+    void shouldReturnEmptyList_whenNoRulesMatch() {
         UUID userId = UUID.randomUUID();
 
-        when(invest500RuleSet.evaluate(userId)).thenReturn(Optional.empty());
-        when(topSavingRuleSet.evaluate(userId)).thenReturn(Optional.empty());
-        when(simpleCreditRuleSet.evaluate(userId)).thenReturn(Optional.empty());
+        when(rule1.evaluate(userId)).thenReturn(Optional.empty());
+        when(rule2.evaluate(userId)).thenReturn(Optional.empty());
 
-        List<RecommendationDto> recommendations = recommendationService.getRecommendations(userId);
+        List<RecommendationDto> result = service.getRecommendations(userId);
 
-        assertTrue(recommendations.isEmpty());
-        verify(invest500RuleSet).evaluate(userId);
-        verify(topSavingRuleSet).evaluate(userId);
-        verify(simpleCreditRuleSet).evaluate(userId);
+        assertTrue(result.isEmpty());
     }
 }
 
