@@ -1,6 +1,7 @@
 package com.bank.star.recommendationservice.controller;
 
 import org.springframework.cache.CacheManager;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -17,6 +18,7 @@ public class ManagementController {
     }
 
     @PostMapping("/clear-caches")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     public void clearCaches() {
         cacheManager.getCacheNames().forEach(
                 name -> Objects.requireNonNull(cacheManager.getCache(name)).clear()
