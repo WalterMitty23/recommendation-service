@@ -6,7 +6,6 @@ import com.bank.star.recommendationservice.entity.DynamicRuleStatsEntity;
 import com.bank.star.recommendationservice.repository.DynamicRuleStatsRepository;
 import com.bank.star.recommendationservice.service.DynamicRuleService;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -25,21 +24,21 @@ public class DynamicRuleController {
     }
 
     @PostMapping
-    public ResponseEntity<DynamicRuleResponse> createRule(@RequestBody DynamicRuleRequest request) {
-        DynamicRuleResponse savedRule = dynamicRuleService.createRule(request);
-        return ResponseEntity.status(HttpStatus.OK).body(savedRule);
+    @ResponseStatus(HttpStatus.OK) // Или HttpStatus.CREATED, если создаёшь новый ресурс
+    public DynamicRuleResponse createRule(@RequestBody DynamicRuleRequest request) {
+        return dynamicRuleService.createRule(request);
     }
 
     @GetMapping
-    public ResponseEntity<Map<String, List<DynamicRuleResponse>>> getAllRules() {
+    public Map<String, List<DynamicRuleResponse>> getAllRules() {
         List<DynamicRuleResponse> rules = dynamicRuleService.getAllRules();
-        return ResponseEntity.ok(Collections.singletonMap("data", rules));
+        return Map.of("data", rules);
     }
 
     @DeleteMapping("/{productId}")
-    public ResponseEntity<Void> deleteRule(@PathVariable UUID productId) {
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteRule(@PathVariable UUID productId) {
         dynamicRuleService.deleteRuleByProductId(productId);
-        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/stats")

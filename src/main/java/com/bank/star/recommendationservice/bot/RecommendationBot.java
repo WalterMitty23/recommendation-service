@@ -11,6 +11,7 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.util.List;
+import java.util.UUID;
 
 @Component
 public class RecommendationBot extends TelegramLongPollingBot {
@@ -32,34 +33,55 @@ public class RecommendationBot extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
-        if (update.hasMessage() && update.getMessage().hasText()) {
-            String chatId = update.getMessage().getChatId().toString();
-            String text = update.getMessage().getText();
+        if (!update.hasMessage() || !update.getMessage().hasText()) return;
 
-            if (text.equals("/start")) {
-                send(chatId, "Привет! Используй команду /recommend <Имя Фамилия> чтобы получить рекомендации.");
-            } else if (text.startsWith("/recommend")) {
-                String[] parts = text.split(" ", 2);
-                if (parts.length != 2) {
-                    send(chatId, "Формат команды: /recommend <Имя Фамилия>");
-                    return;
-                }
+        String chatId = update.getMessage().getChatId().toString();
+        String text = update.getMessage().getText();
 
-                String fullName = parts[1].trim();
-                recommendationsRepository.findUserIdByFullName(fullName).ifPresentOrElse(userId -> {
-                    List<RecommendationDto> recs = recommendationService.getRecommendations(userId);
-                    if (recs.isEmpty()) {
-                        send(chatId, "Пользователь найден, но нет рекомендаций.");
-                    } else {
-                        StringBuilder sb = new StringBuilder("Здравствуйте ").append(fullName).append("\n");
-                        sb.append("Новые продукты для вас:\n");
-                        recs.forEach(r -> sb.append("- ").append(r.getName()).append("\n"));
-                        send(chatId, sb.toString());
-                    }
-                }, () -> send(chatId, "Пользователь не найден."));
-            }
+        if (text.equals("/start")) {
+            handleStartCommand(chatId);
+            return;
+        }
+
+        if (text.startsWith("/recommend")) {
+            handleRecommendCommand(chatId, text);
         }
     }
+
+    private void handleStartCommand(String chatId) {
+        send(chatId, "Привет! Используй команду /recommend <Имя Фамилия> чтобы получить рекомендации.");
+    }
+
+    private void handleRecommendCommand(String chatId, String text) {
+        String[] parts = text.split(" ", 2);
+        if (parts.length != 2) {
+            send(chatId, "Формат команды: /recommend <Имя Фамилия>");
+            return;
+        }
+
+        String fullName = parts[1].trim();
+        recommendationsRepository.findUserIdByFullName(fullName)
+                .ifPresentOrElse(
+                        userId -> handleFoundUser(chatId, fullName, userId),
+                        () -> send(chatId, "Пользователь не найден.")
+                );
+    }
+
+    private void handleFoundUser(String chatId, String fullName, UUID userId) {
+        List<RecommendationDto> recs = recommendationService.getRecommendations(userId);
+
+        if (recs.isEmpty()) {
+            send(chatId, "Пользователь найден, но нет рекомендаций.");
+            return;
+        }
+
+        StringBuilder sb = new StringBuilder("Здравствуйте ").append(fullName).append("\n");
+        sb.append("Новые продукты для вас:\n");
+        recs.forEach(r -> sb.append("- ").append(r.getName()).append("\n"));
+
+        send(chatId, sb.toString());
+    }
+
 
     private void send(String chatId, String text) {
         try {
